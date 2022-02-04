@@ -73,7 +73,7 @@ namespace SocketAPI {
 		public async Task Start(SocketAPIServerConfig config)
 		{
 			this.config = config;
-			
+
 			if (!config.Enabled)
 				return;
 
@@ -200,7 +200,9 @@ namespace SocketAPI {
 		/// </summary>
 		private async Task SendMessage(TcpClient toClient, SocketAPIMessage message)
 		{
-			
+			if (this.config?.Enabled == false)
+				return;
+
 			byte[] wBuff = Encoding.UTF8.GetBytes(SocketAPIProtocol.EncodeMessage(message)!);
 			try
 			{
