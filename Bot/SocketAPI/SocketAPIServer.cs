@@ -144,7 +144,7 @@ namespace SocketAPI {
 
 				if (request == null)
 				{
-					this.SendResponse(client, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
+					await this.SendResponse(client, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
 					continue;
 				}
 
@@ -155,26 +155,26 @@ namespace SocketAPI {
 
 				message.id = request!.id;
 
-				this.SendResponse(client, message);
+				await this.SendResponse(client, message);
 			}
 		}
 
 		/// <summary>
 		/// Sends to the supplied client the given message of type `Response`.
 		/// </summary>
-		public void SendResponse(TcpClient client, SocketAPIMessage message)
+		public async Task SendResponse(TcpClient client, SocketAPIMessage message)
 		{
 			message.type = SocketAPIMessageType.Response;
-			this.SendMessage(client, message);
+			await this.SendMessage(client, message);
 		}
 
 		/// <summary>
 		/// Sends to the supplied client the given message of type `Event`.
 		/// </summary>
-		public void SendEvent(TcpClient client, SocketAPIMessage message)
+		public async Task SendEvent(TcpClient client, SocketAPIMessage message)
 		{
 			message.type = SocketAPIMessageType.Event;
-			this.SendMessage(client, message);
+			await this.SendMessage(client, message);
 		}
 
 		/// <summary>
@@ -185,14 +185,14 @@ namespace SocketAPI {
 			foreach(TcpClient client in clients)
 			{
 				if (client.Connected)
-					await Task.Run(() => SendEvent(client, message));
+					await SendEvent(client, message);
 			}
 		}
 
 		/// <summary>
 		/// Encodes a message and sends it to a client.
 		/// </summary>
-		private async void SendMessage(TcpClient toClient, SocketAPIMessage message)
+		private async Task SendMessage(TcpClient toClient, SocketAPIMessage message)
 		{
 			byte[] wBuff = Encoding.UTF8.GetBytes(SocketAPIProtocol.EncodeMessage(message)!);
 			try
