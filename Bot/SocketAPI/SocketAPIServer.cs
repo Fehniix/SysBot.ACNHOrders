@@ -44,8 +44,12 @@ namespace SocketAPI {
 		/// </summary>
 		private ConcurrentBag<TcpClient> clients = new();
 
-		private SocketAPIServer() {}
+		/// <summary>
+		/// The server configuration file.
+		/// </summary>
+		private SocketAPIServerConfig? config;
 
+		private SocketAPIServer() {}
 
 		private static SocketAPIServer? _shared;
 
@@ -68,6 +72,8 @@ namespace SocketAPI {
 		/// </summary>
 		public async Task Start(SocketAPIServerConfig config)
 		{
+			this.config = config;
+			
 			if (!config.Enabled)
 				return;
 
@@ -194,6 +200,7 @@ namespace SocketAPI {
 		/// </summary>
 		private async Task SendMessage(TcpClient toClient, SocketAPIMessage message)
 		{
+			
 			byte[] wBuff = Encoding.UTF8.GetBytes(SocketAPIProtocol.EncodeMessage(message)!);
 			try
 			{
