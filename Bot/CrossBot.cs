@@ -168,8 +168,6 @@ namespace SysBot.ACNHOrders
             await EnsureAnchorsAreInitialised(token);
             await VisitorList.UpdateNames(token).ConfigureAwait(false);
 
-            bool firstRun = true;
-
             bool hardCrash = immediateRestart;
             if (!immediateRestart)
             {
@@ -180,11 +178,6 @@ namespace SysBot.ACNHOrders
                     await AttemptEchoHook($"[{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] The Dodo code for {TownName} has updated, the new Dodo code is: {DodoCode}.", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
 
                 NotifyDodo(DodoCode);
-                
-                if (firstRun)
-                    firstRun = false;
-                else
-                    SocketAPIServer.shared.BroadcastEvent("sessionRestored", new {dodoCode = DodoCode});
 
                 await SaveDodoCodeToFile(token).ConfigureAwait(false);
 
@@ -323,6 +316,7 @@ namespace SysBot.ACNHOrders
                     await AttemptEchoHook($"[{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] Crash detected on {TownName}. Please wait while I get a new Dodo code.", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
                 NotifyState(GameState.Fetching);
                 LogUtil.LogInfo($"Crash detected on {TownName}, awaiting overworld to fetch new dodo.", Config.IP);
+                SocketAPIServer.shared.BroadcastEvent("crash", null);
                 await ResetFiles(token).ConfigureAwait(false);
                 await Task.Delay(5_000, token).ConfigureAwait(false);
 
@@ -357,6 +351,9 @@ namespace SysBot.ACNHOrders
 
             await SaveDodoCodeToFile(token).ConfigureAwait(false);
             LogUtil.LogError($"Dodo restore successful. New dodo for {TownName} is {DodoCode} and saved to {Config.DodoModeConfig.DodoRestoreFilename}.", Config.IP);
+
+            SocketAPIServer.shared.BroadcastEvent("sessionRestored", new {dodoCode = DodoCode});
+
             if (Config.DodoModeConfig.RefreshMap) // clean map
                 await ClearMapAndSpawnInternally(null, Map, Config.DodoModeConfig.RefreshTerrainData, token, true).ConfigureAwait(false);
         }
