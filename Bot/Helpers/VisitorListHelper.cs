@@ -35,6 +35,46 @@ namespace SysBot.ACNHOrders
         }
     }
 
+    /// <summary>
+    /// Identifies uniquely a visitor that joined or left the island.
+    /// </summary>
+    public class UniqueVisitor 
+    {
+        /// <summary>
+        /// The visitor's name.
+        /// </summary>
+        public string name;
+
+        /// <summary>
+        /// The Nintendo ID associated to the visitor.
+        /// </summary>
+        public string? nintendoID;
+
+        /// <summary>
+        /// The visitor's island name.
+        /// </summary>
+        public string islandName;
+
+        /// <summary>
+        /// The visitor's island ID.
+        /// </summary>
+        public string? islandID;
+
+        public UniqueVisitor(string name, string islandName)
+        {
+            this.name = name;
+            this.islandName = islandName;
+        }
+
+        public UniqueVisitor(string name, string islandName, string? nintendoID, string? islandID)
+        {
+            this.name = name;
+            this.nintendoID = nintendoID;
+            this.islandName = islandName;
+            this.islandID = islandID;
+        }
+    }
+
     public class VisitorListHelper
     {
         private const int VisitorNameSize = 0x14;
@@ -47,6 +87,8 @@ namespace SysBot.ACNHOrders
         private readonly CrossBotConfig Config;
 
         public string[] Visitors { get; private set; } = new string[VisitorListSize];
+
+        public UniqueVisitor[] UniqueVisitors { get; set; } = new UniqueVisitor[VisitorListSize];
 
         public uint VisitorCount { get; private set; } = 0;
         public string TownName { get; private set; } = "the island";
@@ -88,6 +130,20 @@ namespace SysBot.ACNHOrders
             var toRet = LastVisitorDiff.GetDifferenceWith(currentVisitors);
             LastVisitorDiff = currentVisitors;
             return toRet;
+        }
+
+        public async Task<string[]> FetchVisitors(CancellationToken token)
+        {
+            string[] visitors = new string[VisitorListSize];
+
+            for (uint i = 0; i < VisitorListSize; ++i)
+            {
+                ulong offset = OffsetHelper.OnlineSessionVisitorAddress - (i * OffsetHelper.OnlineSessionVisitorSize);
+                var bytes = await Connection.ReadBytesAsync((uint)offset, VisitorNameSize, token).ConfigureAwait(false);
+                visitors[i] = Encoding.UTF8.GetString(bytes).TrimEnd('\0');
+            }
+
+            return visitors;
         }
     }
 }

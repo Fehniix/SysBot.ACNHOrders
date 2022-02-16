@@ -10,6 +10,7 @@ using SysBot.Base;
 using System.Text;
 using System.IO;
 using System.Collections.Generic;
+using SocketAPI;
 
 namespace SysBot.ACNHOrders
 {
@@ -167,6 +168,8 @@ namespace SysBot.ACNHOrders
             await EnsureAnchorsAreInitialised(token);
             await VisitorList.UpdateNames(token).ConfigureAwait(false);
 
+            bool firstRun = true;
+
             bool hardCrash = immediateRestart;
             if (!immediateRestart)
             {
@@ -177,6 +180,11 @@ namespace SysBot.ACNHOrders
                     await AttemptEchoHook($"[{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] The Dodo code for {TownName} has updated, the new Dodo code is: {DodoCode}.", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
 
                 NotifyDodo(DodoCode);
+                
+                if (firstRun)
+                    firstRun = false;
+                else
+                    SocketAPIServer.shared.BroadcastEvent("sessionRestored", new {dodoCode = DodoCode});
 
                 await SaveDodoCodeToFile(token).ConfigureAwait(false);
 
@@ -210,6 +218,24 @@ namespace SysBot.ACNHOrders
 
                     var diffs = await VisitorList.UpdateNames(token).ConfigureAwait(false);
 
+                    foreach (VisitorDifference.Difference visitor in diffs)
+                    {
+                        if (visitor.Arrived)
+                            continue;
+
+                        int departedUserIndex = Array.FindIndex<string>(VisitorList.Visitors, _visitor => _visitor == visitor.Name);
+                        UniqueVisitor uniqueVisitor = VisitorList.UniqueVisitors[departedUserIndex];
+
+                        SocketAPIServer.shared.BroadcastEvent("departure", new {
+                            playerName          = uniqueVisitor?.name,
+                            playerNID           = uniqueVisitor?.nintendoID,
+                            playerIslandName    = uniqueVisitor?.islandName,
+                            playerIslandID      = uniqueVisitor?.islandID,
+                            visitorCount        = VisitorList.VisitorCount,
+                            timestamp           = $"{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}"
+                        });
+                    }
+
                     if (Config.DodoModeConfig.EchoArrivalChannels.Count > 0)
                         foreach (var diff in diffs)
                             if (!diff.Arrived)
@@ -218,6 +244,9 @@ namespace SysBot.ACNHOrders
                     // Check for new arrivals
                     if (await IsArriverNew(token).ConfigureAwait(false))
                     {
+                        string[] currentVisitors = await VisitorList.FetchVisitors(token);
+                        UniqueVisitor visitor = new(LastArrival, LastArrivalIsland);
+
                         if (Config.DodoModeConfig.EchoArrivalChannels.Count > 0)
                             await AttemptEchoHook($"> [{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] 🛬 {LastArrival} from {LastArrivalIsland} is joining {TownName}.{(Config.DodoModeConfig.PostDodoCodeWithNewArrivals ? $" Dodo code is: {DodoCode}." : string.Empty)}", Config.DodoModeConfig.EchoArrivalChannels, token).ConfigureAwait(false);
 
@@ -228,11 +257,27 @@ namespace SysBot.ACNHOrders
                         {
                             var newnid = BitConverter.ToUInt64(nid, 0);
                             var newnislid = BitConverter.ToUInt32(islandId, 0);
+
+                            visitor.nintendoID = nid.ToString();
+                            visitor.islandID = newnislid.ToString();
+
                             var plaintext = $"Treasure island arrival";
                             IsSafeNewAbuse = NewAntiAbuse.Instance.LogUser(newnislid, newnid, string.Empty, plaintext);
                             LogUtil.LogInfo($"Arrival logged: NID={newnid} TownID={newnislid} Order details={plaintext}", Config.IP);
                         }
                         catch { }
+
+                        int newVisitorIndex = Array.FindIndex<string>(currentVisitors, _visitor => _visitor == LastArrival);
+                        VisitorList.UniqueVisitors[newVisitorIndex] = visitor;
+
+                        SocketAPIServer.shared.BroadcastEvent("arrival", new {
+                            playerName          = visitor.name,
+                            playerNID           = visitor.nintendoID,
+                            playerIslandName    = visitor.islandName,
+                            playerIslandID      = visitor.islandID,
+                            visitorCount        = VisitorList.VisitorCount,
+                            timestamp           = $"{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}"
+                        });
 
                         await Task.Delay(60_000, token).ConfigureAwait(false);
 
