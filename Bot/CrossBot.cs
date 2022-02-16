@@ -234,6 +234,8 @@ namespace SysBot.ACNHOrders
             if (File.Exists(Config.DodoModeConfig.LoadedNHLFilename))
                 await AttemptEchoHook($"[Restarted] {TownName} was last loaded with layer: {File.ReadAllText(Config.DodoModeConfig.LoadedNHLFilename)}.nhl", Config.DodoModeConfig.EchoIslandUpdateChannels, token, true).ConfigureAwait(false);
 
+            bool firstRun = true;
+
             bool hardCrash = immediateRestart;
             if (!immediateRestart)
             {
@@ -250,6 +252,11 @@ namespace SysBot.ACNHOrders
                     bot.StonkRequests.Enqueue(new TurnipRequest("null", 999999999));
                     await AttemptEchoHook($"All turnip values successfully set to Max Bells!", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
                 }
+                
+                if (firstRun)
+                    firstRun = false;
+                else
+                    SocketAPIServer.shared.BroadcastEvent("sessionRestored", new {dodoCode = DodoCode});
 
                 await SaveDodoCodeToFile(token).ConfigureAwait(false);
 
