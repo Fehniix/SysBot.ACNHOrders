@@ -464,7 +464,7 @@ namespace SysBot.ACNHOrders
             }
 
             await SaveDodoCodeToFile(token).ConfigureAwait(false);
-            LogUtil.LogError($"Dodo restore successful. New dodo for {TownName} is {DodoCode} and saved to {Config.DodoModeConfig.DodoRestoreFilename}.", Config.IP);
+            LogUtil.LogInfo($"Dodo restore successful. New dodo for {TownName} is {DodoCode} and saved to {Config.DodoModeConfig.DodoRestoreFilename}.", Config.IP);
 
             SocketAPIServer.shared.BroadcastEvent("sessionRestored", new {dodoCode = DodoCode});
 
