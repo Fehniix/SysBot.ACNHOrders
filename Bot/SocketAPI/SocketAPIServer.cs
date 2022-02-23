@@ -154,7 +154,7 @@ namespace SocketAPI {
 					continue;
 				}
 
-				SocketAPIMessage? message = this.InvokeEndpoint(request!.endpoint!, request?.args);
+				SocketAPIMessage? message = await this.InvokeEndpoint(request!.endpoint!, request?.args);
 
 				if (message == null)
 					message = SocketAPIMessage.FromError("The supplied endpoint was not found.");
@@ -290,15 +290,22 @@ namespace SocketAPI {
 		/// <param name="endpointName">The name of the registered endpoint. Case-sensitive!</param>
 		/// <param name="jsonArgs">The arguments to provide to the endpoint, encoded in JSON format.</param>
 		/// <returns>A JSON-formatted response. `null` if the endpoint was not found.</returns>
-		private SocketAPIMessage? InvokeEndpoint(string endpointName, string? jsonArgs)
+		private async Task<SocketAPIMessage?> InvokeEndpoint(string endpointName, string? jsonArgs)
 		{
 			if (!apiEndpoints.ContainsKey(endpointName))
 				return SocketAPIMessage.FromError("The supplied endpoint was not found.");
 
 			try
 			{
-				object? rawResponse = (object?)apiEndpoints[endpointName].Method.Invoke(null, new[] { jsonArgs });
-				return SocketAPIMessage.FromValue(rawResponse);
+				var rawResponseInvocationResult = apiEndpoints[endpointName].Method.Invoke(null, new[] { jsonArgs });
+				
+				if (rawResponseInvocationResult == null)
+					return SocketAPIMessage.FromValue(null);
+
+				if (rawResponseInvocationResult.GetType() == typeof(Task<object?>))
+					return SocketAPIMessage.FromValue(await (Task<object?>)rawResponseInvocationResult);
+
+				return SocketAPIMessage.FromValue(rawResponseInvocationResult);
 			}
 			catch(Exception ex)
 			{
