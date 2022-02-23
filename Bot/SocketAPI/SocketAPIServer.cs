@@ -276,7 +276,7 @@ namespace SocketAPI {
 								.Where(m => m.GetParameters().Count() == 1 &&
 											m.IsStatic &&
 											m.GetParameters()[0].ParameterType == typeof(string) &&
-											m.ReturnType == typeof(object));
+											(m.ReturnType == typeof(object) || m.ReturnType == typeof(Task<object>)));
 
 			foreach (var endpoint in endpoints)
 				RegisterEndpoint(endpoint.Name, (Func<string, object?>)endpoint.CreateDelegate(typeof(Func<string, object?>)));
