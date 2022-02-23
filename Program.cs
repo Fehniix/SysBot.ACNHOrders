@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -15,6 +15,11 @@ namespace SysBot.ACNHOrders
         private static async Task Main(string[] args)
         {
             string configPath;
+
+            // Set up logging for Console Window
+            SysBot.Base.LogUtil.Forwarders.Add(Logger);
+            static void Logger(string msg, string identity) => Console.WriteLine(GetMessage(msg, identity));
+            static string GetMessage(string msg, string identity) => $"> [{DateTime.Now:hh:mm:ss}] - {identity}: {msg}";
 
 			Console.WriteLine("Starting up...");
             if (args.Length > 0) 
