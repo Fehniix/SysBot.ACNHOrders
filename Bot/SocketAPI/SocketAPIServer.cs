@@ -295,6 +295,8 @@ namespace SocketAPI {
 			if (!apiEndpoints.ContainsKey(endpointName))
 				return SocketAPIMessage.FromError("The supplied endpoint was not found.");
 
+			bool isEndpointAsync = apiEndpoints[endpointName]?.Method.ReturnType == typeof(Task<object?>);
+
 			try
 			{
 				var rawResponseInvocationResult = apiEndpoints[endpointName].Method.Invoke(null, new[] { jsonArgs });
@@ -309,7 +311,14 @@ namespace SocketAPI {
 			}
 			catch(Exception ex)
 			{
-				return SocketAPIMessage.FromError(ex.InnerException?.Message ?? "A generic exception was thrown.");
+				string errorMessage = "A generic exception was thrown.";
+
+				if (isEndpointAsync)
+					errorMessage = ex.Message;
+				else
+					errorMessage = ex.InnerException != null ? ex.InnerException!.Message : errorMessage;
+
+				return SocketAPIMessage.FromError(errorMessage);
 			}
 		}
 	}
