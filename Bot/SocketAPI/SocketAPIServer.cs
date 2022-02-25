@@ -306,7 +306,7 @@ namespace SocketAPI {
 			if (!apiEndpoints.ContainsKey(endpointName))
 				return SocketAPIMessage.FromError("The supplied endpoint was not found.");
 
-			bool isEndpointAsync = apiEndpoints[endpointName]?.Method.ReturnType == typeof(Task<object?>);
+			bool isEndpointAsync = apiEndpoints[endpointName]?.Method.ReturnType == typeof(Task<object>);
 
 			try
 			{
@@ -315,8 +315,11 @@ namespace SocketAPI {
 				if (rawResponseInvocationResult == null)
 					return SocketAPIMessage.FromValue(null);
 
-				if (rawResponseInvocationResult.GetType() == typeof(Task<object?>))
-					return SocketAPIMessage.FromValue(await (Task<object?>)rawResponseInvocationResult);
+				if (isEndpointAsync)
+				{
+					object? rawResponse = await (Task<object?>)rawResponseInvocationResult;
+					return SocketAPIMessage.FromValue(rawResponse);
+				}
 
 				return SocketAPIMessage.FromValue(rawResponseInvocationResult);
 			}
