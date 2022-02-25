@@ -135,7 +135,18 @@ namespace SocketAPI {
 			while (true)
 			{
 				byte[] buffer = new byte[client.ReceiveBufferSize];
-				int bytesRead = await stream.ReadAsync(buffer, 0, client.ReceiveBufferSize, tcpListenerCancellationToken);
+				int bytesRead;
+
+				try
+				{
+					bytesRead = await stream.ReadAsync(buffer, 0, client.ReceiveBufferSize, tcpListenerCancellationToken);
+				}
+				catch(Exception ex)
+				{
+					Logger.LogError($"There was an error while reading from client stream: ${ex.Message}");
+					client.Close();
+					break;
+				}
 
 				if (bytesRead == 0)
 				{
