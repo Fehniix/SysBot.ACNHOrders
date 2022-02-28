@@ -8,12 +8,12 @@ namespace SocketAPI
 	class ACNHBotEndpoints 
 	{
 		[SocketAPIEndpoint]
-		public async static Task<object?> Visitors(string args)
+		public static object? Visitors(string args)
 		{
 			if (Globals.Bot == null)
 				throw new System.Exception("The Globals.Bot instance is null.");
 
-			return await Globals.Bot.VisitorList.FetchVisitors(new()).ConfigureAwait(false);
+			return Globals.Bot.VisitorList.UniqueVisitors;
 		}
 	}
 }
