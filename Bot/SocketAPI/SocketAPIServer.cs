@@ -293,6 +293,42 @@ namespace SocketAPI {
 		}
 
 		/// <summary>
+		/// Sends an heartbeat to the supplied client.
+		/// </summary>
+		public async Task SendHeartbeat(TcpClient toClient)
+		{
+			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {Guid.NewGuid().ToString()}");
+			try 
+			{
+				await toAPIClient.tcpClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
+			}
+			catch(Exception ex)
+			{
+				Logger.LogError($"There was an error while sending a message to a client: {ex.Message}");
+				toAPIClient.Destroy();
+			}
+		}
+
+		/// <summary>
+		/// Sends an heartbeat to the supplied client.
+		/// </summary>
+		public async Task SendHeartbeat(SocketAPIClient toAPIClient)
+		{
+			toAPIClient.lastEmittedHeartbeatUUID = System.Guid.NewGuid().ToString();
+
+			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {toAPIClient.lastEmittedHeartbeatUUID}");
+			try 
+			{
+				await toAPIClient.tcpClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
+			}
+			catch(Exception ex)
+			{
+				Logger.LogError($"There was an error while sending an heartbeat to the client: {ex.Message}");
+				toAPIClient.Destroy();
+			}
+		}
+
+		/// <summary>
 		/// Stops the execution of the server.
 		/// </summary>
 		public void Stop()
