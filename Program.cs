@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -80,8 +80,16 @@ namespace SysBot.ACNHOrders
             SaveConfig(twitchConfig, DefaultTwitchPath);
 			SaveConfig(serverConfig, DefaultSocketServerAPIPath);
             
+            var env = SocketAPI.EnvParser.ParseFile(".env");
 			SocketAPI.SocketAPIServer server = SocketAPI.SocketAPIServer.shared;
-			_ = server.Start(serverConfig);
+
+			if ((string?)env?["debug"] == "true" && (string?)env?["awaitsysbot"] == "true")
+            {
+                Console.WriteLine("SocketAPIServer awaited.");
+                await server.Start(serverConfig);
+            }
+            else
+                _ = server.Start(serverConfig);
 
 			await BotRunner.RunFrom(config, CancellationToken.None, twitchConfig).ConfigureAwait(false);
 
