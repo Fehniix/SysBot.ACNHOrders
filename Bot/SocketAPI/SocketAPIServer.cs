@@ -42,7 +42,12 @@ namespace SocketAPI {
 		/// <summary>
 		/// Keeps the list of connected clients to broadcast events to.
 		/// </summary>
-		private ConcurrentBag<TcpClient> clients = new();
+		private ConcurrentDictionary<string, SocketAPIClient> clients = new();
+
+		/// <summary>
+		/// Keeps a list of heartbeats sent to client from which a response is expected.
+		/// </summary>
+		private Dictionary<string, bool> heartbeats = new();
 
 		/// <summary>
 		/// The server configuration file.
@@ -104,10 +109,11 @@ namespace SocketAPI {
 			{
 				try
 				{
-					TcpClient client = await listener.AcceptTcpClientAsync();
-					clients.Add(client);
+					TcpClient tcpClient 	= await listener.AcceptTcpClientAsync();
+					SocketAPIClient client 	= new(tcpClient);
+					clients[client.uuid] 	= client;
+					IPEndPoint? clientEP 	= tcpClient.Client.RemoteEndPoint as IPEndPoint;
 
-					IPEndPoint? clientEP = client.Client.RemoteEndPoint as IPEndPoint;
 					Logger.LogInfo($"A client connected! IP: {clientEP?.Address}, on port: {clientEP?.Port}");
 
 					HandleTcpClient(client);
@@ -115,8 +121,8 @@ namespace SocketAPI {
 				catch(OperationCanceledException) when (tcpListenerCancellationToken.IsCancellationRequested)
 				{
 					Logger.LogInfo("The socket API server was closed.", true);
-					while(!clients.IsEmpty)
-						clients.TryTake(out _);
+					foreach(string key in this.clients.Keys)
+						this.clients.Remove(key, out _);
 				}
 				catch(Exception ex)
 				{
@@ -128,14 +134,14 @@ namespace SocketAPI {
 		/// <summary>
 		/// Given a connected TcpClient, this callback handles communication & graceful shutdown.
 		/// </summary>
-		private async void HandleTcpClient(TcpClient client)
+		private async void HandleTcpClient(SocketAPIClient apiClient)
 		{
-			NetworkStream stream = client.GetStream();
+			NetworkStream stream = apiClient.client.GetStream();
 
 			while (true)
 			{
-				byte[] buffer = new byte[client.ReceiveBufferSize];
-				int bytesRead = await stream.ReadAsync(buffer, 0, client.ReceiveBufferSize, tcpListenerCancellationToken);
+				byte[] buffer = new byte[apiClient.client.ReceiveBufferSize];
+				int bytesRead = await stream.ReadAsync(buffer, 0, apiClient.client.ReceiveBufferSize, tcpListenerCancellationToken);
 
 				if (bytesRead == 0)
 				{
@@ -145,12 +151,28 @@ namespace SocketAPI {
 
 				string rawMessage = Encoding.UTF8.GetString(buffer);
 				rawMessage = Regex.Replace(rawMessage, @"\r\n?|\n|\0", "");
+
+				if (rawMessage.StartsWith("hb"))
+				{
+					string? uuid = rawMessage.Split(" ")[1];
+
+					if (uuid == null)
+					{
+						Logger.LogInfo($"Malformed heartbeat: {rawMessage}. Closed connection to client.");
+						apiClient.client.Close();
+						break;
+					}
+
+					// continue here, and implement heartbeats correctly thorughout the rest of the file!
+
+					continue;
+				}
 				
 				SocketAPIRequest? request = SocketAPIProtocol.DecodeMessage(rawMessage);
 
 				if (request == null)
 				{
-					await this.SendResponse(client, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
+					await this.SendResponse(apiClient.client, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
 					continue;
 				}
 
@@ -161,7 +183,7 @@ namespace SocketAPI {
 
 				message.id = request!.id;
 
-				await this.SendResponse(client, message);
+				await this.SendResponse(apiClient.client, message);
 			}
 		}
 
@@ -188,10 +210,10 @@ namespace SocketAPI {
 		/// </summary>
 		public async void BroadcastEvent(SocketAPIMessage message)
 		{
-			foreach(TcpClient client in clients)
+			foreach(SocketAPIClient apiClient in this.clients.Values)
 			{
-				if (client.Connected)
-					await SendEvent(client, message);
+				if (apiClient.client.Connected)
+					await SendEvent(apiClient.client, message);
 			}
 		}
 
@@ -201,10 +223,10 @@ namespace SocketAPI {
 		/// </summary>
 		public async void BroadcastEvent(string eventName, object? args)
 		{
-			foreach(TcpClient client in clients)
+			foreach(SocketAPIClient apiClient in this.clients.Values)
 			{
-				if (client.Connected)
-					await SendEvent(client, new(
+				if (apiClient.client.Connected)
+					await SendEvent(apiClient.client, new(
 						new {
 							eventName = eventName,
 							eventArgs = args
@@ -229,6 +251,23 @@ namespace SocketAPI {
 			catch(Exception ex)
 			{
 				Logger.LogError($"There was an error while sending a message to a client: {ex.Message}");
+				toClient.Close();
+			}
+		}
+
+		/// <summary>
+		/// Sends an heartbeat to the supplied client.
+		/// </summary>
+		public async Task SendHeartbeat(TcpClient toClient)
+		{
+			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {Guid.NewGuid().ToString()}");
+			try 
+			{
+				await toClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
+			}
+			catch(Exception ex)
+			{
+				Logger.LogError($"There was an error while sending an heartbeat to the client: {ex.Message}");
 				toClient.Close();
 			}
 		}
