@@ -50,11 +50,6 @@ namespace SocketAPI {
 		/// </summary>
 		private SocketAPIServerConfig? config;
 
-		/// <summary>
-		/// A communication channel used solely by the `SocketAPIServer`.
-		/// </summary>
-		private SwitchSocketAsync? dedicatedConnection;
-
 		private SocketAPIServer() {}
 
 		private static SocketAPIServer? _shared;
@@ -83,13 +78,6 @@ namespace SocketAPI {
 			if (!config.Enabled)
 				return;
 
-			SocketAPIConsoleConnectionConfig cfg = new();
-			cfg.IP = SysBot.ACNHOrders.Globals.Bot.Config.IP;
-			cfg.Port = SysBot.ACNHOrders.Globals.Bot.Config.Port;
-
-			this.dedicatedConnection = new(cfg);
-			this.dedicatedConnection.Connect();
-
 			if (!config.LogsEnabled)
 				Logger.disableLogs();
 
@@ -100,6 +88,9 @@ namespace SocketAPI {
 
 			try 
 			{
+				DedicatedConnection.connection.LoadDevConfigs();
+				DedicatedConnection.connection.Start("", 0); // Dev configs override configs provided to .Start().
+
 				listener.Start();
 			}
 			catch(SocketException ex)
