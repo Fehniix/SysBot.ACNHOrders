@@ -21,6 +21,16 @@ namespace SocketAPI
 		private System.Timers.Timer heartbeatTimer = new();
 
 		/// <summary>
+		///	The heartbeat timeout instance. Used to race against client's heartbeat response and determine a flatline.
+		/// </summary>
+		private System.Timers.Timer heartbeatTimeout = new();
+
+		/// <summary>
+		///	The UUID of the last emitted heartbeat.
+		/// </summary>
+		public string lastEmittedHeartbeatUUID = "";
+
+		/// <summary>
 		///	Whether the client responded to the server heartbeat or not.
 		/// </summary>
 		private bool respondedToHeartbeat = false;
@@ -33,11 +43,20 @@ namespace SocketAPI
 		}
 
 		/// <summary>
+		///	Signals that the client has responded to the heartbeat.
+		/// </summary>
+		public void SignalHeartbeatResponse()
+		{
+			this.respondedToHeartbeat = true;
+			this.heartbeatTimeout.Stop();
+		}
+
+		/// <summary>
 		///	Starts emitting heartbeats to the client.
 		/// </summary>
-		public void StartHeartbeat()
+		public void StartEmittingHeartbeatsToClient()
 		{
-			this.heartbeatTimer.Enabled = true;
+			this.heartbeatTimer.Start();
 		}
 
 		/// <summary>
@@ -45,19 +64,20 @@ namespace SocketAPI
 		/// </summary>
 		private void EmitHeartbeat(object source, System.Timers.ElapsedEventArgs e)
 		{
-			_ = SocketAPIServer.shared.SendHeartbeat(this.client);
+			this.lastEmittedHeartbeatUUID = System.Guid.NewGuid().ToString();
+			_ = SocketAPIServer.shared.SendHeartbeat(this.client, this.lastEmittedHeartbeatUUID);
 			
-			System.Timers.Timer heartbeatTimeout = new();
-			heartbeatTimeout.Interval = 2000 * 3;
-			heartbeatTimeout.AutoReset = false;
-			heartbeatTimeout.Elapsed += (object source, System.Timers.ElapsedEventArgs e) => {
+			this.heartbeatTimeout = new();
+			this.heartbeatTimeout.Interval = 2000 * 3;
+			this.heartbeatTimeout.AutoReset = false;
+			this.heartbeatTimeout.Elapsed += (object source, System.Timers.ElapsedEventArgs e) => {
 				if (this.respondedToHeartbeat)
 					return;
 				
 				Logger.LogError($"Heartbeat flatlined for client {this.uuid}. Destroying client.");
 				this.Destroy();
 			};
-			heartbeatTimeout.Start();
+			this.heartbeatTimeout.Start();
 
 			Logger.LogInfo($"Emitted heartbeat to client {this.uuid}.");
 		}

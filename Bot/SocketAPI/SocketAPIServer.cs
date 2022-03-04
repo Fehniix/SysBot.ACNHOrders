@@ -137,6 +137,7 @@ namespace SocketAPI {
 		private async void HandleTcpClient(SocketAPIClient apiClient)
 		{
 			NetworkStream stream = apiClient.client.GetStream();
+			apiClient.StartEmittingHeartbeatsToClient();
 
 			while (true)
 			{
@@ -154,16 +155,24 @@ namespace SocketAPI {
 
 				if (rawMessage.StartsWith("hb"))
 				{
-					string? uuid = rawMessage.Split(" ")[1];
+					string? heartbeatUUID = rawMessage.Split(" ")[1];
 
-					if (uuid == null)
+					if (heartbeatUUID == null)
 					{
 						Logger.LogInfo($"Malformed heartbeat: {rawMessage}. Closed connection to client.");
 						apiClient.client.Close();
 						break;
 					}
 
-					// continue here, and implement heartbeats correctly thorughout the rest of the file!
+					if (heartbeatUUID != apiClient.lastEmittedHeartbeatUUID)
+					{
+						Logger.LogInfo($"Received wrong heartbeat UUID from client {apiClient.uuid}. Expected {apiClient.lastEmittedHeartbeatUUID}, got {heartbeatUUID}. Closing connection with client.");
+						apiClient.client.Close();
+						break;
+					}
+
+					apiClient.SignalHeartbeatResponse();
+					Logger.LogInfo($"Client {apiClient.uuid} responded to heartbeat ({heartbeatUUID}).");
 
 					continue;
 				}
@@ -258,9 +267,9 @@ namespace SocketAPI {
 		/// <summary>
 		/// Sends an heartbeat to the supplied client.
 		/// </summary>
-		public async Task SendHeartbeat(TcpClient toClient)
+		public async Task SendHeartbeat(TcpClient toClient, string heartbeatUUID)
 		{
-			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {Guid.NewGuid().ToString()}");
+			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {heartbeatUUID}");
 			try 
 			{
 				await toClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
