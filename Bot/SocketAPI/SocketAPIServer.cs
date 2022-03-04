@@ -176,7 +176,7 @@ namespace SocketAPI {
 
 					continue;
 				}
-				
+
 				SocketAPIRequest? request = SocketAPIProtocol.DecodeMessage(rawMessage);
 
 				if (request == null)
