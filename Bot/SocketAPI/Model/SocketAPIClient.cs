@@ -13,7 +13,7 @@ namespace SocketAPI
 		/// <summary>
 		///	The `TcpClient` instance.
 		/// </summary>
-		public System.Net.Sockets.TcpClient client;
+		public System.Net.Sockets.TcpClient tcpClient;
 
 		/// <summary>
 		///	The heartbeat timer instance.
@@ -35,9 +35,9 @@ namespace SocketAPI
 		/// </summary>
 		private bool respondedToHeartbeat = false;
 
-		public SocketAPIClient(System.Net.Sockets.TcpClient client)
+		public SocketAPIClient(System.Net.Sockets.TcpClient tcpClient)
 		{
-			this.client = client;
+			this.tcpClient = tcpClient;
 			this.heartbeatTimer.Interval = 2000;
 			this.heartbeatTimer.Elapsed += this.EmitHeartbeat;
 		}
@@ -65,7 +65,7 @@ namespace SocketAPI
 		private void EmitHeartbeat(object source, System.Timers.ElapsedEventArgs e)
 		{
 			this.lastEmittedHeartbeatUUID = System.Guid.NewGuid().ToString();
-			_ = SocketAPIServer.shared.SendHeartbeat(this.client, this.lastEmittedHeartbeatUUID);
+			_ = SocketAPIServer.shared.SendHeartbeat(this.tcpClient, this.lastEmittedHeartbeatUUID);
 			
 			this.heartbeatTimeout = new();
 			this.heartbeatTimeout.Interval = 2000 * 3;
@@ -88,7 +88,7 @@ namespace SocketAPI
 		public void Destroy()
 		{
 			this.heartbeatTimer.Stop();
-			this.client.Close();
+			this.tcpClient.Close();
 		}
 	}
 }

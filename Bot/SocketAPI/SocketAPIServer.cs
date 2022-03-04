@@ -140,13 +140,15 @@ namespace SocketAPI {
 		/// </summary>
 		private async void HandleTcpClient(SocketAPIClient apiClient)
 		{
-			NetworkStream stream = apiClient.client.GetStream();
+			TcpClient tcpClient 	= apiClient.tcpClient;
+			NetworkStream stream 	= tcpClient.GetStream();
+
 			apiClient.StartEmittingHeartbeatsToClient();
 
 			while (true)
 			{
-				byte[] buffer = new byte[apiClient.client.ReceiveBufferSize];
-				int bytesRead = await stream.ReadAsync(buffer, 0, apiClient.client.ReceiveBufferSize, tcpListenerCancellationToken);
+				byte[] buffer = new byte[tcpClient.ReceiveBufferSize];
+				int bytesRead = await stream.ReadAsync(buffer, 0, tcpClient.ReceiveBufferSize, tcpListenerCancellationToken);
 
 				if (bytesRead == 0)
 				{
@@ -164,14 +166,14 @@ namespace SocketAPI {
 					if (heartbeatUUID == null)
 					{
 						Logger.LogInfo($"Malformed heartbeat: {rawMessage}. Closed connection to client.");
-						apiClient.client.Close();
+						tcpClient.Close();
 						break;
 					}
 
 					if (heartbeatUUID != apiClient.lastEmittedHeartbeatUUID)
 					{
 						Logger.LogInfo($"Received wrong heartbeat UUID from client {apiClient.uuid}. Expected {apiClient.lastEmittedHeartbeatUUID}, got {heartbeatUUID}. Closing connection with client.");
-						apiClient.client.Close();
+						tcpClient.Close();
 						break;
 					}
 
@@ -185,7 +187,7 @@ namespace SocketAPI {
 
 				if (request == null)
 				{
-					await this.SendResponse(apiClient.client, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
+					await this.SendResponse(tcpClient, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
 					continue;
 				}
 
@@ -196,7 +198,7 @@ namespace SocketAPI {
 
 				message.id = request!.id;
 
-				await this.SendResponse(apiClient.client, message);
+				await this.SendResponse(tcpClient, message);
 			}
 		}
 
@@ -225,8 +227,8 @@ namespace SocketAPI {
 		{
 			foreach(SocketAPIClient apiClient in this.clients.Values)
 			{
-				if (apiClient.client.Connected)
-					await SendEvent(apiClient.client, message);
+				if (apiClient.tcpClient.Connected)
+					await SendEvent(apiClient.tcpClient, message);
 			}
 		}
 
@@ -238,8 +240,8 @@ namespace SocketAPI {
 		{
 			foreach(SocketAPIClient apiClient in this.clients.Values)
 			{
-				if (apiClient.client.Connected)
-					await SendEvent(apiClient.client, new(
+				if (apiClient.tcpClient.Connected)
+					await SendEvent(apiClient.tcpClient, new(
 						new {
 							eventName = eventName,
 							eventArgs = args
