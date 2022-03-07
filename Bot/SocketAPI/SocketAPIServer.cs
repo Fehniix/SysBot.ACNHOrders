@@ -96,8 +96,11 @@ namespace SocketAPI {
 
 			try 
 			{
-				DedicatedConnection.connection.LoadDevConfigs();
-				//DedicatedConnection.connection.Start("", 0); // Dev configs override configs provided to .Start().
+				if (config.EnableDedicatedConnection)
+				{
+					DedicatedConnection.connection.LoadDevConfigs();
+					DedicatedConnection.connection.Start("", 0); // Dev configs override configs provided to .Start().
+				}
 
 				listener.Start();
 			}
