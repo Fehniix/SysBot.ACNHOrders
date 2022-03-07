@@ -39,7 +39,7 @@ namespace SocketAPI
 		/// <summary>
 		///	The heartbeat interval in milliseconds.
 		/// </summary>
-		public int heartbeatInterval = 2000;
+		public int heartbeatInterval = 16000;
 
 		/// <summary>
 		///	The number of non-received responses that trigger a flatline.
@@ -104,6 +104,7 @@ namespace SocketAPI
 		public void Destroy()
 		{
 			this.heartbeatTimer.Stop();
+			this.heartbeatTimeout.Stop();
 			this.tcpClient.Close();
 		}
 	}
