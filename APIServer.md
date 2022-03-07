@@ -16,12 +16,12 @@ The server comes with its own configuration file: `server.json`. It contains the
 }
 ```
 
-## Heartbeat
+## Heartbeats
 
 The server emits a heartbeat signal at regular intervals and expects a response from the client within a set interval.
 If the client does not correspond the heartbeat, the connection is considered closed.
 
-Heartbeats are messages of the form: `hb <random_UUID>`. The client must respond with the same message and contain the same UUID.
+Heartbeats are messages of the form: `hb <random_UUID>`. The client must respond with the same message.
 
 ## `SocketAPIRequest`
 

@@ -26,19 +26,30 @@ namespace SocketAPI
 		private System.Timers.Timer heartbeatTimeout = new();
 
 		/// <summary>
+		///	Whether the client responded to the server heartbeat or not.
+		/// Note: this is initially set to true to allow the first heartbeat to be correctly handled.
+		/// </summary>
+		private bool respondedToHeartbeat = true;
+
+		/// <summary>
 		///	The UUID of the last emitted heartbeat.
 		/// </summary>
 		public string lastEmittedHeartbeatUUID = "";
 
 		/// <summary>
-		///	Whether the client responded to the server heartbeat or not.
+		///	The heartbeat interval in milliseconds.
 		/// </summary>
-		private bool respondedToHeartbeat = false;
+		public int heartbeatInterval = 2000;
+
+		/// <summary>
+		///	The number of non-received responses that trigger a flatline.
+		/// </summary>
+		public int maxHeartbeatRetries = 3;
 
 		public SocketAPIClient(System.Net.Sockets.TcpClient tcpClient)
 		{
 			this.tcpClient = tcpClient;
-			this.heartbeatTimer.Interval = 2000;
+			this.heartbeatTimer.Interval = this.heartbeatInterval;
 			this.heartbeatTimer.Elapsed += this.EmitHeartbeat;
 		}
 
@@ -64,22 +75,27 @@ namespace SocketAPI
 		/// </summary>
 		private void EmitHeartbeat(object source, System.Timers.ElapsedEventArgs e)
 		{
-			this.lastEmittedHeartbeatUUID = System.Guid.NewGuid().ToString();
-			_ = SocketAPIServer.shared.SendHeartbeat(this.tcpClient, this.lastEmittedHeartbeatUUID);
+			_ = SocketAPIServer.shared.SendHeartbeat(this);
+
+			Logger.LogDebug($"Emitted heartbeat with UUID {this.lastEmittedHeartbeatUUID} to client {this.uuid}.");
+
+			if (!this.respondedToHeartbeat)
+				return;
 			
+			// Previous heartbeat received a response => emit a new one.
+			this.respondedToHeartbeat = false;
+
 			this.heartbeatTimeout = new();
-			this.heartbeatTimeout.Interval = 2000 * 3;
+			this.heartbeatTimeout.Interval = this.heartbeatInterval * this.maxHeartbeatRetries;
 			this.heartbeatTimeout.AutoReset = false;
 			this.heartbeatTimeout.Elapsed += (object source, System.Timers.ElapsedEventArgs e) => {
 				if (this.respondedToHeartbeat)
 					return;
 				
-				Logger.LogError($"Heartbeat flatlined for client {this.uuid}. Destroying client.");
+				Logger.LogError($"Heartbeat flatlined after {this.maxHeartbeatRetries} retries ({this.heartbeatInterval * this.maxHeartbeatRetries}ms) for client {this.uuid}. Destroying client.");
 				this.Destroy();
 			};
 			this.heartbeatTimeout.Start();
-
-			Logger.LogInfo($"Emitted heartbeat to client {this.uuid}.");
 		}
 
 		/// <summary>

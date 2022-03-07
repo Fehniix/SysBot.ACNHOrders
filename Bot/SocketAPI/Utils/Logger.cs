@@ -1,4 +1,3 @@
-using System;
 using SysBot.Base;
 
 namespace SocketAPI
@@ -9,6 +8,11 @@ namespace SocketAPI
 		/// Whether logs are enabled or not.
 		/// </summary>
 		private static bool logsEnabled = true;
+
+		/// <summary>
+		/// Whether verbose debug logs should be written to console.
+		/// </summary>
+		private static bool verboseDebugEnabled = false;
 		
 		public static void LogInfo(string message, bool ignoreDisabled = false)
 		{
@@ -34,9 +38,25 @@ namespace SocketAPI
 			LogUtil.LogError(message, nameof(SocketAPI));
 		}
 
-		public static void disableLogs()
+		public static void LogDebug(string message, bool ignoreDisabled = false)
+		{
+			if (!verboseDebugEnabled)
+				return;
+				
+			if (!logsEnabled && !ignoreDisabled)
+				return;
+
+			LogUtil.LogError(message, nameof(SocketAPI));
+		}
+
+		public static void DisableLogs()
 		{
 			logsEnabled = false;
+		}
+
+		public static void EnableVerboseDebugLogs()
+		{
+			verboseDebugEnabled = true;
 		}
 	}
 }

@@ -84,7 +84,10 @@ namespace SocketAPI {
 				return;
 
 			if (!config.LogsEnabled)
-				Logger.disableLogs();
+				Logger.DisableLogs();
+
+			if (config.OutputVerboseDebugInfo)
+				Logger.EnableVerboseDebugLogs();
 
 			int eps = RegisterEndpoints();
 			Logger.LogInfo($"n. of registered endpoints: {eps}");
@@ -94,7 +97,7 @@ namespace SocketAPI {
 			try 
 			{
 				DedicatedConnection.connection.LoadDevConfigs();
-				DedicatedConnection.connection.Start("", 0); // Dev configs override configs provided to .Start().
+				//DedicatedConnection.connection.Start("", 0); // Dev configs override configs provided to .Start().
 
 				listener.Start();
 			}
@@ -118,7 +121,7 @@ namespace SocketAPI {
 					clients[client.uuid] 	= client;
 					IPEndPoint? clientEP 	= tcpClient.Client.RemoteEndPoint as IPEndPoint;
 
-					Logger.LogInfo($"A client connected! IP: {clientEP?.Address}, on port: {clientEP?.Port}");
+					Logger.LogDebug($"A client connected! IP: {clientEP?.Address}, on port: {clientEP?.Port}");
 
 					HandleTcpClient(client);
 				}
@@ -148,11 +151,21 @@ namespace SocketAPI {
 			while (true)
 			{
 				byte[] buffer = new byte[tcpClient.ReceiveBufferSize];
-				int bytesRead = await stream.ReadAsync(buffer, 0, tcpClient.ReceiveBufferSize, tcpListenerCancellationToken);
+				int bytesRead = 0;
+				
+				try
+				{
+					bytesRead = await stream.ReadAsync(buffer, 0, tcpClient.ReceiveBufferSize, tcpListenerCancellationToken);
+				}
+				catch(Exception ex)
+				{
+					Logger.LogDebug($"There was an error while reading client {apiClient.uuid} stream: {ex.Message}\nClosing connection.");
+					apiClient.Destroy();
+				}
 
 				if (bytesRead == 0)
 				{
-					Logger.LogInfo("A remote client closed the connection.");
+					Logger.LogDebug("A remote client closed the connection.");
 					break;
 				}
 
@@ -165,20 +178,20 @@ namespace SocketAPI {
 
 					if (heartbeatUUID == null)
 					{
-						Logger.LogInfo($"Malformed heartbeat: {rawMessage}. Closed connection to client.");
-						tcpClient.Close();
+						Logger.LogDebug($"Malformed heartbeat: {rawMessage}. Closed connection to client.");
+						apiClient.Destroy();
 						break;
 					}
 
 					if (heartbeatUUID != apiClient.lastEmittedHeartbeatUUID)
 					{
-						Logger.LogInfo($"Received wrong heartbeat UUID from client {apiClient.uuid}. Expected {apiClient.lastEmittedHeartbeatUUID}, got {heartbeatUUID}. Closing connection with client.");
-						tcpClient.Close();
+						Logger.LogDebug($"Received wrong heartbeat UUID from client {apiClient.uuid}. Expected {apiClient.lastEmittedHeartbeatUUID}, got {heartbeatUUID}. Closing connection with client.");
+						apiClient.Destroy();
 						break;
 					}
 
 					apiClient.SignalHeartbeatResponse();
-					Logger.LogInfo($"Client {apiClient.uuid} responded to heartbeat ({heartbeatUUID}).");
+					Logger.LogDebug($"Client {apiClient.uuid} responded to heartbeat ({heartbeatUUID}).");
 
 					continue;
 				}
@@ -187,7 +200,7 @@ namespace SocketAPI {
 
 				if (request == null)
 				{
-					await this.SendResponse(tcpClient, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
+					await this.SendResponse(apiClient, SocketAPIMessage.FromError("There was an error while JSON-parsing the provided request."));
 					continue;
 				}
 
@@ -198,26 +211,26 @@ namespace SocketAPI {
 
 				message.id = request!.id;
 
-				await this.SendResponse(tcpClient, message);
+				await this.SendResponse(apiClient, message);
 			}
 		}
 
 		/// <summary>
 		/// Sends to the supplied client the given message of type `Response`.
 		/// </summary>
-		public async Task SendResponse(TcpClient client, SocketAPIMessage message)
+		public async Task SendResponse(SocketAPIClient apiClient, SocketAPIMessage message)
 		{
 			message.type = SocketAPIMessageType.Response;
-			await this.SendMessage(client, message);
+			await this.SendMessage(apiClient, message);
 		}
 
 		/// <summary>
 		/// Sends to the supplied client the given message of type `Event`.
 		/// </summary>
-		public async Task SendEvent(TcpClient client, SocketAPIMessage message)
+		public async Task SendEvent(SocketAPIClient apiClient, SocketAPIMessage message)
 		{
 			message.type = SocketAPIMessageType.Event;
-			await this.SendMessage(client, message);
+			await this.SendMessage(apiClient, message);
 		}
 
 		/// <summary>
@@ -228,7 +241,7 @@ namespace SocketAPI {
 			foreach(SocketAPIClient apiClient in this.clients.Values)
 			{
 				if (apiClient.tcpClient.Connected)
-					await SendEvent(apiClient.tcpClient, message);
+					await SendEvent(apiClient, message);
 			}
 		}
 
@@ -241,7 +254,7 @@ namespace SocketAPI {
 			foreach(SocketAPIClient apiClient in this.clients.Values)
 			{
 				if (apiClient.tcpClient.Connected)
-					await SendEvent(apiClient.tcpClient, new(
+					await SendEvent(apiClient, new(
 						new {
 							eventName = eventName,
 							eventArgs = args
@@ -253,7 +266,7 @@ namespace SocketAPI {
 		/// <summary>
 		/// Encodes a message and sends it to a client.
 		/// </summary>
-		private async Task SendMessage(TcpClient toClient, SocketAPIMessage message)
+		private async Task SendMessage(SocketAPIClient toAPIClient, SocketAPIMessage message)
 		{
 			if (this.config?.Enabled == false)
 				return;
@@ -261,29 +274,31 @@ namespace SocketAPI {
 			byte[] wBuff = Encoding.UTF8.GetBytes(SocketAPIProtocol.EncodeMessage(message)!);
 			try
 			{
-				await toClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
+				await toAPIClient.tcpClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
 			}
 			catch(Exception ex)
 			{
 				Logger.LogError($"There was an error while sending a message to a client: {ex.Message}");
-				toClient.Close();
+				toAPIClient.Destroy();
 			}
 		}
 
 		/// <summary>
 		/// Sends an heartbeat to the supplied client.
 		/// </summary>
-		public async Task SendHeartbeat(TcpClient toClient, string heartbeatUUID)
+		public async Task SendHeartbeat(SocketAPIClient toAPIClient)
 		{
-			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {heartbeatUUID}");
+			toAPIClient.lastEmittedHeartbeatUUID = System.Guid.NewGuid().ToString();
+
+			byte[] wBuff = Encoding.UTF8.GetBytes($"hb {toAPIClient.lastEmittedHeartbeatUUID}");
 			try 
 			{
-				await toClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
+				await toAPIClient.tcpClient.GetStream().WriteAsync(wBuff, 0, wBuff.Length, tcpListenerCancellationToken);
 			}
 			catch(Exception ex)
 			{
 				Logger.LogError($"There was an error while sending an heartbeat to the client: {ex.Message}");
-				toClient.Close();
+				toAPIClient.Destroy();
 			}
 		}
 

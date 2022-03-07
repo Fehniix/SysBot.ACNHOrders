@@ -16,6 +16,11 @@ namespace SocketAPI
 		public bool LogsEnabled { get; set; } = true;
 
 		/// <summary>
+		/// Whether verbose debug logs (such as connect/disconnect/heartbeat events) should be written to console.
+		/// </summary>
+		public bool OutputVerboseDebugInfo { get; set; } = false;
+
+		/// <summary>
 		/// The network port on which the socket server listens for incoming connections.
 		/// </summary>
 		public ushort Port { get; set; } = 5201;
