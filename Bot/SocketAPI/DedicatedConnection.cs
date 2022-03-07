@@ -18,11 +18,6 @@ namespace SocketAPI
 		private SocketAPIConsoleConnectionConfig? devConfigs;
 
 		/// <summary>
-		/// The semaphore used to lock read/write operations to the console.
-		/// </summary>
-		private SemaphoreSlim semaphore = new(0);
-
-		/// <summary>
 		/// You can instantiate this class if you so wish to create and maintain your own dedicated connection reference.
 		/// </summary>
 		public DedicatedConnection() {}

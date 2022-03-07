@@ -21,6 +21,11 @@ namespace SocketAPI
 		public bool OutputVerboseDebugInfo { get; set; } = false;
 
 		/// <summary>
+		/// Whether to enable or disable the dedicated connection.
+		/// </summary>
+		public bool EnableDedicatedConnection { get; set; } = false;
+
+		/// <summary>
 		/// The network port on which the socket server listens for incoming connections.
 		/// </summary>
 		public ushort Port { get; set; } = 5201;
