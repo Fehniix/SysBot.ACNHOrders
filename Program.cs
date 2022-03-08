@@ -79,6 +79,18 @@ namespace SysBot.ACNHOrders
 			SaveConfig(config, configPath);
             SaveConfig(twitchConfig, DefaultTwitchPath);
 			SaveConfig(serverConfig, DefaultSocketServerAPIPath);
+
+            if (serverConfig.EnableDedicatedConnection)
+            {
+                SocketAPI.SocketAPIConsoleConnectionConfig? devConsoleConfig = SocketAPI.DedicatedConnection.LoadDevConfigs();
+                SocketAPI.SocketAPIConsoleConnectionConfig consoleConfig = new();
+                consoleConfig.IP = config.IP;
+                consoleConfig.Port = config.Port;
+                
+                Globals.DedicatedConnection = new(devConsoleConfig ?? consoleConfig);
+                
+                await Globals.DedicatedConnection.Start();
+            }
             
             var env = SocketAPI.EnvParser.ParseFile(".env");
 			SocketAPI.SocketAPIServer server = SocketAPI.SocketAPIServer.shared;

@@ -3,7 +3,7 @@ namespace SocketAPI
 	/// <summary>
 	/// Describes the connection to console configuration parameters.
 	/// </summary>
-	class SocketAPIConsoleConnectionConfig: SysBot.Base.IWirelessConnectionConfig {
+	public class SocketAPIConsoleConnectionConfig: SysBot.Base.IWirelessConnectionConfig {
 		private string _ip = "";
 		private int port;
 
