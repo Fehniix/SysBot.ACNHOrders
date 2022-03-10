@@ -231,18 +231,6 @@ namespace SocketAPI {
 		}
 
 		/// <summary>
-		/// Given a message, this method sends it to all currently connected clients in parallel encoded as an event.
-		/// </summary>
-		public async void BroadcastEvent(SocketAPIMessage message)
-		{
-			foreach(SocketAPIClient apiClient in this.clients.Values)
-			{
-				if (apiClient.tcpClient.Connected)
-					await SendEvent(apiClient, message);
-			}
-		}
-
-		/// <summary>
 		/// Given an event name and event parameters, this method defines a standardized `SocketAPIMessage` sends it 
 		/// to all currently connected clients in parallel encoded as an event.
 		/// </summary>

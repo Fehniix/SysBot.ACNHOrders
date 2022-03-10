@@ -39,7 +39,7 @@ namespace SocketAPI
 		/// <summary>
 		///	The heartbeat interval in milliseconds.
 		/// </summary>
-		public int heartbeatInterval = 16000;
+		public int heartbeatInterval = 8000;
 
 		/// <summary>
 		///	The number of non-received responses that trigger a flatline.

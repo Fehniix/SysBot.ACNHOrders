@@ -88,7 +88,6 @@ namespace SysBot.ACNHOrders
                 consoleConfig.Port = config.Port;
                 
                 Globals.DedicatedConnection = new(devConsoleConfig ?? consoleConfig);
-                
                 await Globals.DedicatedConnection.Start();
             }
             

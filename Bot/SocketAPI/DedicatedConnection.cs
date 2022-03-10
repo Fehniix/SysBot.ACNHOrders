@@ -58,6 +58,9 @@ namespace SocketAPI
 			Logger.LogInfo("Dedicated connection with console opened.");
 			
 			this.consoleConnectionStream = this.consoleConnection.GetStream();
+
+            string version = await this.GetVersion(new());
+            Logger.LogInfo($"Requested sysbot-base version as first interaction: {version}");
 		}
 
 		/// <summary>
