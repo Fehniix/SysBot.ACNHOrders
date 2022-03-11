@@ -53,7 +53,15 @@ namespace SocketAPI
 		public async Task Start(string ip, int port)
 		{
 			this.consoleConnection = new();
-			await this.consoleConnection.ConnectAsync(ip, port);
+            try
+            {
+                await this.consoleConnection.ConnectAsync(ip, port);
+            }
+            catch(Exception ex)
+            {
+                Logger.LogError($"Dedicated connection could not be established. Error: {ex.Message}");
+                return;
+            }
 
 			Logger.LogInfo("Dedicated connection with console opened.");
 			
