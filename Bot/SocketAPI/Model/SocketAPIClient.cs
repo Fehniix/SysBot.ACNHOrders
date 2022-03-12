@@ -26,6 +26,11 @@ namespace SocketAPI
 		private System.Timers.Timer heartbeatTimeout = new();
 
 		/// <summary>
+		///	The config reference passed from the server.
+		/// </summary>
+		private SocketAPIServerConfig config;
+
+		/// <summary>
 		///	Whether the client responded to the server heartbeat or not.
 		/// Note: this is initially set to true to allow the first heartbeat to be correctly handled.
 		/// </summary>
@@ -46,9 +51,10 @@ namespace SocketAPI
 		/// </summary>
 		public int maxHeartbeatRetries = 3;
 
-		public SocketAPIClient(System.Net.Sockets.TcpClient tcpClient)
+		public SocketAPIClient(System.Net.Sockets.TcpClient tcpClient, SocketAPIServerConfig config)
 		{
 			this.tcpClient = tcpClient;
+			this.config = config;
 			this.heartbeatTimer.Interval = this.heartbeatInterval;
 			this.heartbeatTimer.Elapsed += this.EmitHeartbeat;
 		}
@@ -77,7 +83,8 @@ namespace SocketAPI
 		{
 			_ = SocketAPIServer.shared.SendHeartbeat(this);
 
-			Logger.LogDebug($"Emitted heartbeat with UUID {this.lastEmittedHeartbeatUUID} to client {this.uuid}.");
+			if (!(this.config.NoDebugHeartbeatLogs))
+				Logger.LogDebug($"Emitted heartbeat with UUID {this.lastEmittedHeartbeatUUID} to client {this.uuid}.");
 
 			if (!this.respondedToHeartbeat)
 				return;

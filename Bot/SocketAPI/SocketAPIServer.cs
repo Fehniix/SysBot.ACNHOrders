@@ -114,7 +114,7 @@ namespace SocketAPI {
 				try
 				{
 					TcpClient tcpClient 	= await listener.AcceptTcpClientAsync();
-					SocketAPIClient client 	= new(tcpClient);
+					SocketAPIClient client 	= new(tcpClient, this.config);
 					clients[client.uuid] 	= client;
 					IPEndPoint? clientEP 	= tcpClient.Client.RemoteEndPoint as IPEndPoint;
 
@@ -188,7 +188,9 @@ namespace SocketAPI {
 					}
 
 					apiClient.SignalHeartbeatResponse();
-					Logger.LogDebug($"Client {apiClient.uuid} responded to heartbeat ({heartbeatUUID}).");
+					
+					if (!(config?.NoDebugHeartbeatLogs ?? false))
+						Logger.LogDebug($"Client {apiClient.uuid} responded to heartbeat ({heartbeatUUID}).");
 
 					continue;
 				}

@@ -73,6 +73,11 @@ namespace SysBot.ACNHOrders
             this.islandName = islandName;
             this.islandID = islandID;
         }
+
+        public override string ToString()
+        {
+            return $"<UniqueVisitor | NID: {this.nintendoID}> {this.name}, from {this.islandName} (island ID: {this.islandID})";
+        }
     }
 
     public class VisitorListHelper

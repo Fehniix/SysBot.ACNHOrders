@@ -26,6 +26,11 @@ namespace SocketAPI
 		public bool EnableDedicatedConnection { get; set; } = false;
 
 		/// <summary>
+		/// Whether to enable or disable heartbeat logs.
+		/// </summary>
+		public bool NoDebugHeartbeatLogs { get; set; } = true;
+
+		/// <summary>
 		/// The network port on which the socket server listens for incoming connections.
 		/// </summary>
 		public ushort Port { get; set; } = 5201;
