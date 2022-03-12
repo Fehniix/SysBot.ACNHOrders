@@ -38,27 +38,28 @@ namespace SysBot.ACNHOrders
     /// <summary>
     /// Identifies uniquely a visitor that joined or left the island.
     /// </summary>
+    [Serializable]
     public class UniqueVisitor 
     {
         /// <summary>
         /// The visitor's name.
         /// </summary>
-        public string name;
+        public string name { get; set; }
 
         /// <summary>
         /// The Nintendo ID associated to the visitor.
         /// </summary>
-        public string? nintendoID;
+        public string? nintendoID { get; set; }
 
         /// <summary>
         /// The visitor's island name.
         /// </summary>
-        public string islandName;
+        public string islandName { get; set; }
 
         /// <summary>
         /// The visitor's island ID.
         /// </summary>
-        public string? islandID;
+        public string? islandID { get; set; }
 
         public UniqueVisitor(string name, string islandName)
         {
