@@ -63,6 +63,46 @@ A client request string is pre-validated by `SocketAPIProtocol.DecodeMessage`. T
 "args":"{\"myArg\":123}"
 ```
 
+## Events Reference
+
+The `SocketAPIServer` emits the following events:
+
+### `'arrival'`: emitted whenever a player joins the island
+
+```csharp
+{
+    playerName: string
+    playerNID: string?
+    playerIslandName: string?
+    playerIslandID: string?
+    visitorCount: int
+    timestamp: string
+}
+```
+
+### `'departure'`: emitted whenever a player leaves the island
+
+```csharp
+{
+    playerName: string
+    playerNID: string?
+    playerIslandName: string?
+    playerIslandID: string?
+    visitorCount: int
+    timestamp: string
+}
+```
+
+### `'crash'`: emitted whenever a crash occurs, in Dodo restore mode
+
+### `'sessionRestored'`: emitted whenever the session recovers from a crash
+
+```csharp
+{
+    dodoCode: string
+}
+```
+
 ## Client implementations
 
 - TypeScript, NodeJS: [Fehniix/sysbot-net-api](https://github.com/Fehniix/sysbot-net-api)

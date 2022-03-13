@@ -54,20 +54,20 @@ namespace SysBot.ACNHOrders
         /// <summary>
         /// The visitor's island name.
         /// </summary>
-        public string islandName { get; set; }
+        public string? islandName { get; set; }
 
         /// <summary>
         /// The visitor's island ID.
         /// </summary>
         public string? islandID { get; set; }
 
-        public UniqueVisitor(string name, string islandName)
+        public UniqueVisitor(string name, string? islandName)
         {
             this.name = name;
             this.islandName = islandName;
         }
 
-        public UniqueVisitor(string name, string islandName, string? nintendoID, string? islandID)
+        public UniqueVisitor(string name, string? islandName, string? nintendoID, string? islandID)
         {
             this.name = name;
             this.nintendoID = nintendoID;
@@ -77,7 +77,7 @@ namespace SysBot.ACNHOrders
 
         public override string ToString()
         {
-            return $"<UniqueVisitor | NID: {this.nintendoID}> {this.name}, from {this.islandName} (island ID: {this.islandID})";
+            return $"<UniqueVisitor | NID: {this.nintendoID ?? "null"}> {this.name}, from {this.islandName ?? "null"} (island ID: {this.islandID ?? "null"})";
         }
     }
 
@@ -94,7 +94,7 @@ namespace SysBot.ACNHOrders
 
         public string[] Visitors { get; private set; } = new string[VisitorListSize];
 
-        public UniqueVisitor[] UniqueVisitors { get; set; } = new UniqueVisitor[VisitorListSize];
+        public UniqueVisitor?[] UniqueVisitors { get; set; } = new UniqueVisitor[VisitorListSize];
 
         public uint VisitorCount { get; private set; } = 0;
         public string TownName { get; private set; } = "the island";
@@ -136,6 +136,26 @@ namespace SysBot.ACNHOrders
             var toRet = LastVisitorDiff.GetDifferenceWith(currentVisitors);
             LastVisitorDiff = currentVisitors;
             return toRet;
+        }
+
+        /// <summary>
+        /// Returns a list of `UniqueVisitor`s that includes normal `Visitor`s if a unique visitor could not be instantiated yet.
+        /// </summary>
+        public UniqueVisitor[] GetCompositeVisitors()
+        {
+            UniqueVisitor[] visitors = new UniqueVisitor[VisitorListSize];
+
+            for (int i = 0; i < VisitorListSize; i++)
+            {
+                if ((this.Visitors[i] == null || 
+                    string.IsNullOrEmpty(this.Visitors[i]) || 
+                    string.IsNullOrWhiteSpace(this.Visitors[i])) && this.UniqueVisitors[i] == null)
+                    continue;
+
+                visitors[i] = this.UniqueVisitors[i] ?? new(this.Visitors[i], null);
+            }
+
+            return visitors;
         }
 
         public async Task<string[]> FetchVisitors(CancellationToken token)

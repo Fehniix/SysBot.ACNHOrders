@@ -209,6 +209,7 @@ namespace SysBot.ACNHOrders
 
                     await DropLoop(token).ConfigureAwait(false);
 
+                    string[] oldVisitors = new List<string>(VisitorList.Visitors).ToArray();
                     var diffs = await VisitorList.UpdateNames(token).ConfigureAwait(false);
 
                     foreach (VisitorDifference.Difference visitor in diffs)
@@ -216,11 +217,28 @@ namespace SysBot.ACNHOrders
                         if (visitor.Arrived)
                             continue;
 
-                        int departedUserIndex = Array.FindIndex<string>(VisitorList.Visitors, _visitor => _visitor == visitor.Name);
-                        UniqueVisitor uniqueVisitor = VisitorList.UniqueVisitors[departedUserIndex];
+                        int departedUserIndex = Array.FindIndex<string>(oldVisitors, _visitor => _visitor == visitor.Name);
+                        
+                        UniqueVisitor? uniqueVisitor = null;
+                        if (departedUserIndex != -1)
+                        {
+                            uniqueVisitor = VisitorList.UniqueVisitors[departedUserIndex];
+                            VisitorList.UniqueVisitors[departedUserIndex] = null;
+                        }
+
+                        UniqueVisitor[] uniqueVisitors = VisitorList.GetCompositeVisitors();
+                        for(int i = 0; i < VisitorList.UniqueVisitors.Length; i++)
+                        {
+                            UniqueVisitor? uv = uniqueVisitors[i];
+
+                            if (uv == null)
+                                Console.WriteLine(VisitorList.Visitors[i]);
+                            else
+                                Console.WriteLine(uv);
+                        }
 
                         SocketAPIServer.shared.BroadcastEvent("departure", new {
-                            playerName          = uniqueVisitor?.name,
+                            playerName          = uniqueVisitor?.name ?? visitor.Name,
                             playerNID           = uniqueVisitor?.nintendoID,
                             playerIslandName    = uniqueVisitor?.islandName,
                             playerIslandID      = uniqueVisitor?.islandID,
@@ -251,7 +269,7 @@ namespace SysBot.ACNHOrders
                             var newnid = BitConverter.ToUInt64(nid, 0);
                             var newnislid = BitConverter.ToUInt32(islandId, 0);
 
-                            visitor.nintendoID = nid.ToString();
+                            visitor.nintendoID = newnid.ToString();
                             visitor.islandID = newnislid.ToString();
 
                             var plaintext = $"Treasure island arrival";
@@ -261,7 +279,10 @@ namespace SysBot.ACNHOrders
                         catch { }
 
                         int newVisitorIndex = Array.FindIndex<string>(currentVisitors, _visitor => _visitor == LastArrival);
-                        VisitorList.UniqueVisitors[newVisitorIndex] = visitor;
+                        if (newVisitorIndex != -1)
+                            VisitorList.UniqueVisitors[newVisitorIndex] = visitor;
+
+                        UniqueVisitor[] uniqueVisitors = VisitorList.GetCompositeVisitors();
 
                         SocketAPIServer.shared.BroadcastEvent("arrival", new {
                             playerName          = visitor.name,
@@ -316,6 +337,7 @@ namespace SysBot.ACNHOrders
                     await AttemptEchoHook($"[{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] Crash detected on {TownName}. Please wait while I get a new Dodo code.", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
                 NotifyState(GameState.Fetching);
                 LogUtil.LogInfo($"Crash detected on {TownName}, awaiting overworld to fetch new dodo.", Config.IP);
+                VisitorList.UniqueVisitors = new UniqueVisitor[VisitorListHelper.VisitorListSize];
                 SocketAPIServer.shared.BroadcastEvent("crash", null);
                 await ResetFiles(token).ConfigureAwait(false);
                 await Task.Delay(5_000, token).ConfigureAwait(false);
