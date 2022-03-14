@@ -188,7 +188,8 @@ namespace SysBot.ACNHOrders
                     if (RestoreRestartRequested)
                     {
                         RestoreRestartRequested = false;
-                        await AttemptEchoHook($"[{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] Please wait for the new dodo code for {TownName}.", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
+                        await ResetFiles(token).ConfigureAwait(false);
+                        await AttemptEchoHook($"[{DateTime.Now:yyyy-MM-dd hh:mm:ss tt}] Restart requested. Please wait for the new dodo code for {TownName}.", Config.DodoModeConfig.EchoDodoChannels, token).ConfigureAwait(false);
                         await DodoRestoreLoop(true, token).ConfigureAwait(false);
                         return;
                     }
