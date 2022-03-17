@@ -228,15 +228,6 @@ namespace SysBot.ACNHOrders
                         }
 
                         UniqueVisitor[] uniqueVisitors = VisitorList.GetCompositeVisitors();
-                        for(int i = 0; i < VisitorList.UniqueVisitors.Length; i++)
-                        {
-                            UniqueVisitor? uv = uniqueVisitors[i];
-
-                            if (uv == null)
-                                Console.WriteLine(VisitorList.Visitors[i]);
-                            else
-                                Console.WriteLine(uv);
-                        }
 
                         SocketAPIServer.shared.BroadcastEvent("departure", new {
                             playerName          = uniqueVisitor?.name ?? visitor.Name,
