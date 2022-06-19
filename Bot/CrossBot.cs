@@ -182,6 +182,8 @@ namespace SysBot.ACNHOrders
         {
             await EnsureAnchorsAreInitialised(token);
             await VisitorList.UpdateNames(token).ConfigureAwait(false);
+            if (File.Exists(Config.DodoModeConfig.LoadedNHLFilename))
+                await AttemptEchoHook($"{TownName} was last loaded with layer: {File.ReadAllText(Config.DodoModeConfig.LoadedNHLFilename)}.nhl", Config.DodoModeConfig.EchoIslandUpdateChannels, token).ConfigureAwait(false);
 
             bool hardCrash = immediateRestart;
             if (!immediateRestart)
@@ -351,6 +353,7 @@ namespace SysBot.ACNHOrders
                             await SwitchConnection.FreezeValues((uint)OffsetHelper.FieldItemStart, Map.StartupBytes, ConnectionHelper.MapChunkCount, token).ConfigureAwait(false);
 
                         await AttemptEchoHook($"{TownName} has switched to item layer: {mapRequest.OverrideLayerName}", Config.DodoModeConfig.EchoIslandUpdateChannels, token).ConfigureAwait(false);
+                        await SaveLayerNameToFile(Path.GetFileNameWithoutExtension(mapRequest.OverrideLayerName), token).ConfigureAwait(false); 
                     }
 
                     if (Config.DodoModeConfig.AutoNewDodoTimeMinutes > -1)
@@ -1106,6 +1109,12 @@ namespace SysBot.ACNHOrders
             string DodoDetails = Config.DodoModeConfig.MinimizeDetails ? DodoCode : $"{TownName}: {DodoCode}";
             byte[] encodedText = Encoding.ASCII.GetBytes(DodoDetails);
             await FileUtil.WriteBytesToFileAsync(encodedText, Config.DodoModeConfig.DodoRestoreFilename, token).ConfigureAwait(false);
+        }
+
+        private async Task SaveLayerNameToFile(string name, CancellationToken token)
+        {
+            byte[] encodedText = Encoding.ASCII.GetBytes(name);
+            await FileUtil.WriteBytesToFileAsync(encodedText, Config.DodoModeConfig.LoadedNHLFilename, token).ConfigureAwait(false);
         }
 
         private async Task SaveVisitorsToFile(CancellationToken token)
