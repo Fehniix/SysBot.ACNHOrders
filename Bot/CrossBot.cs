@@ -183,7 +183,7 @@ namespace SysBot.ACNHOrders
             await EnsureAnchorsAreInitialised(token);
             await VisitorList.UpdateNames(token).ConfigureAwait(false);
             if (File.Exists(Config.DodoModeConfig.LoadedNHLFilename))
-                await AttemptEchoHook($"{TownName} was last loaded with layer: {File.ReadAllText(Config.DodoModeConfig.LoadedNHLFilename)}.nhl", Config.DodoModeConfig.EchoIslandUpdateChannels, token).ConfigureAwait(false);
+                await AttemptEchoHook($"{TownName} was last loaded with layer: {File.ReadAllText(Config.DodoModeConfig.LoadedNHLFilename)}.nhl", Config.DodoModeConfig.EchoIslandUpdateChannels, token, true).ConfigureAwait(false);
 
             bool hardCrash = immediateRestart;
             if (!immediateRestart)
@@ -409,10 +409,10 @@ namespace SysBot.ACNHOrders
         }
 
         // hacked in discord forward, should really be a delegate or resusable forwarder
-        private async Task AttemptEchoHook(string message, IReadOnlyCollection<ulong> channels, CancellationToken token)
+        private async Task AttemptEchoHook(string message, IReadOnlyCollection<ulong> channels, CancellationToken token, bool checkForDoublePosts = false)
         {
             foreach (var msgChannel in channels)
-                if (!await Globals.Self.TrySpeakMessage(msgChannel, message).ConfigureAwait(false))
+                if (!await Globals.Self.TrySpeakMessage(msgChannel, message, checkForDoublePosts).ConfigureAwait(false))
                     LogUtil.LogError($"Unable to post into channels: {msgChannel}.", Config.IP);
         }
 
